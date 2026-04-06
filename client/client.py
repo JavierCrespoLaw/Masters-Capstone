@@ -1,11 +1,14 @@
 import socket
 import ssl
+import os
 
 HEADER = 64
 PORT = 5050
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
 LOGIN_MESSAGE = "!LOGIN"
+REGISTER_MESSAGE = "!REGISTER"
+FILE_END_MESSAGE = "!FILE_END"
 SERVER = socket.gethostbyname(socket.gethostname())
 ADDR = (SERVER, PORT)
 
@@ -30,3 +33,16 @@ def receiveMessage():
         msg = client.recv(msg_length).decode(FORMAT)
         return msg
     return None
+
+def sendFile(file_name):
+    file = open(file_name, "rb")
+    file_size = os.path.getsize(file_name)
+
+    client.send(os.path.basename(file_name).encode(FORMAT))
+    client.send(str(file_size).encode(FORMAT))
+
+    data = file.read()
+    client.sendall(data)
+    client.send(FILE_END_MESSAGE)
+
+    file.close

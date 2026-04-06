@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import QDialog, QApplication
 from PyQt5.uic import loadUi
 
 import client
+import validLoginInfo
 
 class Login(QDialog):
     def __init__(self):
@@ -51,8 +52,19 @@ class CreateAcc(QDialog):
         email = self.email.text()
         password = self.password.text()
         passwordConfirm = self.passwordConfirm.text()
-        if password == passwordConfirm:
+
+        if not validLoginInfo.checkValidEmail(email) and not validLoginInfo.checkValidPassword(password):
+            print("Error: Email or password not valid")
+        elif password == passwordConfirm:
             print("Create Account Attempt with email: ", email, " and password: ", password)
+            client.send(client.REGISTER_MESSAGE)
+            client.send(email)
+            client.send(password)
+            msg = client.receiveMessage()
+            if msg == "!SUCCESS":
+                print(f"Registration success!")
+            elif msg == "!FAILURE":
+                print(f"Error: Email already in use.")
         else:
             print("Error: Passwords must match")
 

@@ -22,10 +22,8 @@ def saveToDatabase(email, password):
     conn = sqlite3.connect("userData.db")
     cursor = conn.cursor()
 
-    cursor.execute(f"""
-    INSERT OR IGNORE INTO users (email, password) VALUES
-    ('{email}', '{password}')
-    """)
+    query = "INSERT OR IGNORE INTO users (email, password) VALUES (?, ?)"
+    cursor.execute(query, (email, password))
 
     conn.commit()
     conn.close()
@@ -41,7 +39,8 @@ def existsInDatabase(email, password):
     #SELECT password FROM users WHERE email = {email}
     #""")
 
-    cursor.execute("SELECT password FROM users WHERE email = ?", (email,))
+    query = "SELECT password FROM users WHERE email = ?"
+    cursor.execute(query, (email,))
 
     data = cursor.fetchone()
     print(data)
@@ -57,33 +56,25 @@ def emailInDatabase(email):
     conn = sqlite3.connect("userData.db")
     cursor = conn.cursor()
 
-    cursor.execute(f"""
-    SELECT EXISTS(SELECT 1 FROM users WHERE email = {email})
-    """)
+    query = "SELECT EXISTS(SELECT 1 FROM users WHERE email = ?)"
+    cursor.execute(query, (email,))
 
-    c = cursor.fetchone
+    c = cursor.fetchone()
     print(c)
 
-    if c:
+    if c[0] == 1:
         return True
     else:
         return False
 
-def passwordInDatabase(email, password):
-    conn = sqlite3.connect("userData.db")
-    cursor = conn.cursor()
-
-    cursor.execute(f"""
-    SELECT password FROM users WHERE email = {email}
-    """)
-
-    row = cursor.fetchone()
-    print(row)
-
-    #if row[1] == password :
-    #    return True
-    #else:
-    #    return False
-    return True
 
 
+
+def main():
+    # print("Attempting to save something to database")
+    # saveToDatabase("testing@email.com", "TestPass#123")
+    print("Check if email and password exists in database")
+    print(emailInDatabase("test@email.com"))
+
+if __name__ == "__main__":
+    main()
