@@ -8,7 +8,8 @@ def createDatabase():
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
-                   email TEXT PRIMARY KEY,
+                   username TEXT PRIMARY KEY,
+                   email TEXT NOT NULL,
                    password TEXT NOT NULL
     )""")
 
@@ -16,14 +17,15 @@ def createDatabase():
     conn.close()
 
 # Saves the given email and password to the database
-def saveToDatabase(email, password):
+def saveToDatabase(username, email, password):
+
     createDatabase()
 
     conn = sqlite3.connect("userData.db")
     cursor = conn.cursor()
 
-    query = "INSERT OR IGNORE INTO users (email, password) VALUES (?, ?)"
-    cursor.execute(query, (email, password))
+    query = "INSERT OR IGNORE INTO users (username, email, password) VALUES (?, ?, ?)"
+    cursor.execute(query, (username, email, password))
 
     conn.commit()
     conn.close()
@@ -31,7 +33,7 @@ def saveToDatabase(email, password):
 
 # saveToDatabase("test@email.com", "testpass123")
 
-def existsInDatabase(email, password):
+def existsInDatabase(username, password):
     conn = sqlite3.connect("userData.db")
     cursor = conn.cursor()
 
@@ -39,8 +41,8 @@ def existsInDatabase(email, password):
     #SELECT password FROM users WHERE email = {email}
     #""")
 
-    query = "SELECT password FROM users WHERE email = ?"
-    cursor.execute(query, (email,))
+    query = "SELECT password FROM users WHERE username = ?"
+    cursor.execute(query, (username,))
 
     data = cursor.fetchone()
     print(data)
@@ -66,6 +68,21 @@ def emailInDatabase(email):
         return True
     else:
         return False
+    
+def usernameInDatabase(username):
+    conn = sqlite3.connect("userData.db")
+    cursor = conn.cursor()
+
+    query = "SELECT EXISTS(SELECT 1 FROM users WHERE username = ?)"
+    cursor.execute(query, (username,))
+
+    c = cursor.fetchone()
+    print(c)
+
+    if c[0] == 1:
+        return True
+    else:
+        return False
 
 
 
@@ -75,6 +92,8 @@ def main():
     # saveToDatabase("testing@email.com", "TestPass#123")
     print("Check if email and password exists in database")
     print(emailInDatabase("test@email.com"))
+    print(usernameInDatabase("TestUser"))
+    print(existsInDatabase("TestUser", "fakepass"))
 
 if __name__ == "__main__":
     main()

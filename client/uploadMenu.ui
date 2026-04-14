@@ -22,9 +22,9 @@
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>325</x>
+     <x>225</x>
      <y>50</y>
-     <width>150</width>
+     <width>350</width>
      <height>100</height>
     </rect>
    </property>
@@ -33,7 +33,98 @@
 font-size:28pt;</string>
    </property>
    <property name="text">
-    <string>Login</string>
+    <string>Upload File</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="browseButton">
+   <property name="geometry">
+    <rect>
+     <x>420</x>
+     <y>190</y>
+     <width>200</width>
+     <height>60</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">background-color: rgb(189, 189, 189);
+font-size: 16pt ;</string>
+   </property>
+   <property name="text">
+    <string>Browse</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_3">
+   <property name="geometry">
+    <rect>
+     <x>180</x>
+     <y>200</y>
+     <width>240</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">color: rgb(239, 239, 239);
+font-size:16pt;</string>
+   </property>
+   <property name="text">
+    <string>Find Local File:</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="uploadButton">
+   <property name="geometry">
+    <rect>
+     <x>420</x>
+     <y>390</y>
+     <width>200</width>
+     <height>60</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">background-color: rgb(189, 189, 189);
+font-size: 16pt ;</string>
+   </property>
+   <property name="text">
+    <string>Upload</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_4">
+   <property name="geometry">
+    <rect>
+     <x>180</x>
+     <y>400</y>
+     <width>240</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">color: rgb(239, 239, 239);
+font-size:16pt;</string>
+   </property>
+   <property name="text">
+    <string>Upload file:</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="fileSelected">
+   <property name="geometry">
+    <rect>
+     <x>200</x>
+     <y>300</y>
+     <width>400</width>
+     <height>40</height>
+    </rect>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">color: rgb(239, 239, 239);
+font-size:16pt;</string>
+   </property>
+   <property name="text">
+    <string/>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
@@ -42,9 +133,9 @@ font-size:28pt;</string>
   <widget class="QLabel" name="label_2">
    <property name="geometry">
     <rect>
-     <x>200</x>
-     <y>180</y>
-     <width>131</width>
+     <x>180</x>
+     <y>500</y>
+     <width>240</width>
      <height>40</height>
     </rect>
    </property>
@@ -53,15 +144,32 @@ font-size:28pt;</string>
 font-size:16pt;</string>
    </property>
    <property name="text">
-    <string>Username:</string>
+    <string>Main Menu:</string>
    </property>
   </widget>
-  <widget class="QLabel" name="label_3">
+  <widget class="QPushButton" name="mainMenuButton">
    <property name="geometry">
     <rect>
-     <x>200</x>
-     <y>270</y>
-     <width>130</width>
+     <x>420</x>
+     <y>490</y>
+     <width>200</width>
+     <height>60</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">background-color: rgb(189, 189, 189);
+font-size: 16pt ;</string>
+   </property>
+   <property name="text">
+    <string>Main Menu</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_6">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>20</y>
+     <width>250</width>
      <height>40</height>
     </rect>
    </property>
@@ -70,76 +178,31 @@ font-size:16pt;</string>
 font-size:16pt;</string>
    </property>
    <property name="text">
-    <string>Password:</string>
+    <string>Signed in as:</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="loginButton">
+  <widget class="QLabel" name="usernameLabel">
    <property name="geometry">
     <rect>
-     <x>350</x>
-     <y>370</y>
-     <width>100</width>
-     <height>30</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">background-color: rgb(189, 189, 189);
-font-size: 10pt ;</string>
-   </property>
-   <property name="text">
-    <string>Confirm</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="username">
-   <property name="geometry">
-    <rect>
-     <x>340</x>
-     <y>180</y>
-     <width>320</width>
+     <x>20</x>
+     <y>60</y>
+     <width>250</width>
      <height>40</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">font-size: 14pt;
-color: rgb(239, 239, 239);</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="password">
-   <property name="geometry">
-    <rect>
-     <x>340</x>
-     <y>270</y>
-     <width>320</width>
-     <height>40</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">font-size: 14pt;
-color: rgb(239, 239, 239);</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_4">
-   <property name="geometry">
-    <rect>
-     <x>200</x>
-     <y>430</y>
-     <width>190</width>
-     <height>20</height>
     </rect>
    </property>
    <property name="styleSheet">
     <string notr="true">color: rgb(239, 239, 239);
-font-size:10pt;</string>
+font-size:16pt;</string>
    </property>
    <property name="text">
-    <string>Don't have an account?</string>
+    <string>(Blank)</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="createAccButton">
+  <widget class="QPushButton" name="logoutButton">
    <property name="geometry">
     <rect>
-     <x>390</x>
-     <y>430</y>
+     <x>20</x>
+     <y>100</y>
      <width>130</width>
      <height>30</height>
     </rect>
@@ -149,41 +212,7 @@ font-size:10pt;</string>
 font-size: 10pt ;</string>
    </property>
    <property name="text">
-    <string>Create Account</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="resetPasswordButton">
-   <property name="geometry">
-    <rect>
-     <x>390</x>
-     <y>470</y>
-     <width>130</width>
-     <height>30</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">background-color: rgb(189, 189, 189);
-font-size: 10pt ;</string>
-   </property>
-   <property name="text">
-    <string>Reset Password</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_5">
-   <property name="geometry">
-    <rect>
-     <x>200</x>
-     <y>470</y>
-     <width>190</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">color: rgb(239, 239, 239);
-font-size:10pt;</string>
-   </property>
-   <property name="text">
-    <string>Forgot your password?</string>
+    <string>Logout</string>
    </property>
   </widget>
  </widget>
