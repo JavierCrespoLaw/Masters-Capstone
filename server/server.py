@@ -5,6 +5,9 @@ import threading
 
 import validLoginInfo
 import database
+import getConfig
+import sendEmail
+import twoFactorAuth
 
 HEADER = 64
 
@@ -51,17 +54,7 @@ def receiveMessage(conn, addr):
         return msg
     return None
 
-#def sendFile(conn, addr, filePath):
-#    file = open(filePath, "rb")
-#    file_size = os.path.getsize(filePath)
-#    file_name = os.path.basename(filePath)
-
-#    conn.send(file_name.encode(FORMAT))
-#    conn.send((str(file_size)).encode(FORMAT))
-
-#    data = file.read()
-#    conn.sendall(data)
-
+# sends a file in folder (username) and with name (file_name)
 def sendFile(conn, addr, username, file_name):
     directory_path = ".\\documents\\" + username
     file_path = directory_path + "\\" + file_name
@@ -80,6 +73,15 @@ def sendFile(conn, addr, username, file_name):
 
     file.close
 
+def deleteFile(username, file_name):
+    directory_path = ".\\documents\\" + username
+    file_path = directory_path + "\\" + file_name
+
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+
+# Receive a file and store it in folder (username)
 def receiveFile(conn, addr, username):
 
     file_name = receiveMessage(conn, addr)
@@ -125,6 +127,7 @@ def handle_client(conn, addr):
     connected = True
     username = ""
     logged_in = False
+    googleAuthSuccess = False
 
     while connected:
 
@@ -139,31 +142,63 @@ def handle_client(conn, addr):
                 print("Disconnecting")
                 connected = False
             case "!LOGIN":
-                print("Login attempt")
-                logged_in, username = login(conn, addr)
-            case "!REGISTER":
-                print("Register attempt")
-                register(conn, addr)
-            case "!FILE_SEND":
+                if not logged_in:
+                    print("Login attempt")
+                    logged_in, username = login(conn, addr)
+                else:
+                    print("Error: user is already logged in")
+            case "!AUTH":
                 if logged_in:
+                    print("Authentication attempt")
+                    googleAuthSuccess, honeytoken = authenticate(username, conn, addr)
+                else:
+                    print("Error: need to log in first")
+            case "!CANCEL_AUTH":
+                if logged_in and not googleAuthSuccess:
+                    print("Returning user to login")
+                    username = ""
+                    logged_in = False
+                    googleAuthSuccess = False
+                else:
+                    print("Error: user shouldn't be in authentication screen")
+            case "!REGISTER":
+                if not logged_in:
+                    print("Register attempt")
+                    register(conn, addr)
+                else:
+                    print("Error: user is already logged in")
+            case "!FILE_SEND":
+                if logged_in and googleAuthSuccess:
                     print("User " + username + " is sending a file.")
                     receiveFile(conn, addr, username)
                 else:
                     print("Error: user is not logged in")
             case "!LOGOUT":
-                if logged_in:
+                if logged_in and googleAuthSuccess:
                     print("User " + username + " is logging out.")
                     username = ""
                     logged_in = False
+                    googleAuthSuccess = False
+                else:
+                    print("Error: user is not logged in")
             case "!FILE_LIST":
-                if logged_in:
+                if logged_in and googleAuthSuccess:
                     print("User " + username + " is requesting a list of their files.")
                     sendFileList(conn, addr, username)
+                else:
+                    print("Error: user is not logged in")
             case "!FILE_DOWNLOAD":
-                if logged_in:
+                if logged_in and googleAuthSuccess:
                     print("User " + username + " is trying to download a file.")
                     file_name = receiveMessage(conn, addr)
                     sendFile(conn, addr, username, file_name)
+                else:
+                    print("Error: user is not logged in")
+            case "!FILE_DELETE":
+                if logged_in and googleAuthSuccess:
+                    print("User " + username + " is trying to delete a file.")
+                    file_name = receiveMessage(conn, addr)
+                    deleteFile(username, file_name)
 
         # conn.send("Message received".encode(FORMAT))
 
@@ -174,12 +209,9 @@ def login(conn, addr):
     username = receiveMessage(conn, addr)
     password = receiveMessage(conn, addr)
     print(f"Login attempt detected with username {username} and password {password}")
-    # emailValid = validLoginInfo.checkValidEmail(email)
-    # passwordValid = validLoginInfo.checkValidPassword(password)
     loginValid = database.existsInDatabase(username, password)
     if loginValid:
         print(f"Username and password are valid!")
-        # database.saveToDatabase(email, password)
         send("!SUCCESS", conn, addr)
     else:
         print(f"Username and password are not valid!")
@@ -187,20 +219,52 @@ def login(conn, addr):
 
     return loginValid, username
 
+def authenticate(username, conn, addr):
+    userOTP = receiveMessage(conn, addr)
+    code1, code2, code3 = database.getCodesFromDatabase(username)
+    authNum = int(database.getAuthNumFromDatabase(username))
+    result = twoFactorAuth.verifyCodes(code1, code2, code3, userOTP, authNum)
+    authSuccess = False
+    honeytoken = False
+    match result:
+        case "SUCCESS":
+            print("Authentication Successfull!")
+            send("!SUCCESS", conn, addr)
+            authSuccess = True
+        case "FAILURE":
+            print("Authentication failed!")
+            send("!FAILURE", conn, addr)
+        case "HONEYTOKEN":
+            print("Honeytoken triggered!")
+            send("!HONEYTOKEN", conn, addr)
+            honeytoken = True
+
+    return authSuccess, honeytoken
+
+
 def register(conn, addr):
     username = receiveMessage(conn, addr)
     email = receiveMessage(conn, addr)
     password = receiveMessage(conn, addr)
-    print(f"Register attempt detected with username {username}, email {email}, and password {password}")
+    authenticationNumber = receiveMessage(conn, addr)
+    print(f"Register attempt detected with username {username}, email {email}, password {password}, and authentication number {authenticationNumber}")
     usernameInDatabase = database.usernameInDatabase(str(username))
     emailInDatabase = database.emailInDatabase(str(email))
     if not emailInDatabase and not usernameInDatabase:
         print(f"Registration successful!")
-        database.saveToDatabase(str(username), str(email), str(password))
+        database.saveToUserDatabase(str(username), str(email), str(password))
+        database.saveToAuthenticationNumbersDatabase(str(username), int(authenticationNumber))
+        twoFactorAuthenticationSetup(str(username), str(email))
         send("!SUCCESS", conn, addr)
     else:
         print(f"Username or Email already in use")
         send("!FAILURE", conn, addr)
+
+def twoFactorAuthenticationSetup(username, email):
+    code1, code2, code3 = twoFactorAuth.generateCodes()
+    database.saveToCodesDatabase(username, code1, code2, code3)
+    sendEmail.emailQRCodes(username, getConfig.getEmailServer(), getConfig.getPasswordServer(), email, code1, code2, code3)
+
 
 def start_server():
     server.listen()
@@ -211,10 +275,21 @@ def start_server():
         thread.start()
         print(f"Number of connections: {(threading.active_count() - 1)}")
 
-
-def main():
+def start():
+    if getConfig.loadEnvValues() == False:
+        print("Error: Unable to get config values. ")
+        return
+    database.createDatabases()
     print("Starting server: ")
     start_server()
+
+
+def main():
+    getConfig.loadEnvValues()
+    code1, code2, code3 = database.getCodesFromDatabase("testUser")
+    # sendEmail.emailQRCodes("testUser", getConfig.getEmailServer(), getConfig.getPasswordServer(), "crespoj1@sunypoly.edu", code1, code2, code3)
+    print(twoFactorAuth.verifyCodes(code1, code2, code3, "748273", 3))
+
 
 if __name__ == "__main__":
     main()
