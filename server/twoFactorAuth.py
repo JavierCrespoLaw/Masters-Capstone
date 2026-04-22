@@ -1,5 +1,6 @@
 import pyotp
 import qrcode
+import random
 
 def generateCodes():
     code1 = pyotp.random_base32()
@@ -44,3 +45,8 @@ def verifyCodes(code1, code2, code3, userOTP, authNum):
                 return "HONEYTOKEN"
             else:
                 return "FAILURE"
+            
+def generateRandomNumber():
+    random_number = random.randint(0, 999999)
+    padded_number = f"{random_number:06}"
+    return padded_number

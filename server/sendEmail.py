@@ -44,9 +44,9 @@ def emailQRCodes(username, email_server, password_server, email_receiver, code1,
     message['SUBJECT'] = f"{username} 2FA codes"
 
     body = f"""Hello {username},
-            \n\nThis email was sent to you because you have just registered an account with this email.
+            \n\nThis email was sent to you because you have just created/altered a file storage account with this email.
             \n\nAttached are the 2FA codes associated with your account. Please scan them with Google Authenticator to use for your login process.
-            \n\nReminder: Only use the code with the number selected during registration. Failure to do so will result in a temporary lock on your account.
+            \n\nReminder: Only use the code associated with the number you selected. Failure to do so will result in a temporary lock on your account.
             \n\nIf you did not create an account, you may ignore this email.
             """
     message.attach(MIMEText(body, 'plain'))
@@ -83,9 +83,34 @@ def emailQRCodes(username, email_server, password_server, email_receiver, code1,
 
     server.sendmail(email_server, email_receiver, text)
 
-    print(f"Email has been sent from {email_server} to {email_receiver}. ")
+    print(f"2FA QR Codes Email has been sent from {email_server} to {email_receiver}. ")
     attachment1.close()
     attachment2.close()
     attachment3.close()
 
     shutil.rmtree(tempdir)
+
+def emailVerificationCode(username, email_server, password_server, email_receiver, verification_number):
+    message = MIMEMultipart()
+    message['FROM'] = email_server
+    message['TO'] = email_receiver
+    message['SUBJECT'] = f"{username} Verification code"
+
+    body = f"""Hello {username},
+            \n\nThis email was sent to you because you have just attempted to reset your file storage password. 
+            \n\nYour verification number is: {verification_number}.
+            \n\nIf you are not attempting to reset your password, you may ignore this email. 
+            """
+    message.attach(MIMEText(body, 'plain'))
+
+    text = message.as_string()
+
+    server = smtplib.SMTP("smtp.gmail.com", 587)
+
+    server.starttls()
+
+    server.login(email_server, password_server)
+
+    server.sendmail(email_server, email_receiver, text)
+
+    print(f"Verification Code Email has been sent from {email_server} to {email_receiver}. ")

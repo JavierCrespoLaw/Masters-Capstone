@@ -167,6 +167,12 @@ def handle_client(conn, addr):
                     register(conn, addr)
                 else:
                     print("Error: user is already logged in")
+            case "!RESET_PASS":
+                if not logged_in:
+                    print("Attempting to reset password")
+                    reset(conn, addr)
+                else:
+                    print("Error: user is already logged in")
             case "!FILE_SEND":
                 if logged_in and googleAuthSuccess:
                     print("User " + username + " is sending a file.")
@@ -254,15 +260,87 @@ def register(conn, addr):
         print(f"Registration successful!")
         database.saveToUserDatabase(str(username), str(email), str(password))
         database.saveToAuthenticationNumbersDatabase(str(username), int(authenticationNumber))
-        twoFactorAuthenticationSetup(str(username), str(email))
+        twoFactorAuthenticationSetup(str(username), str(email), False)
         send("!SUCCESS", conn, addr)
     else:
         print(f"Username or Email already in use")
         send("!FAILURE", conn, addr)
 
-def twoFactorAuthenticationSetup(username, email):
+def reset(conn, addr):
+    emailReceived = False
+    email = ""
+    while not emailReceived:
+        email = receiveMessage(conn, addr)
+        if email == "!CANCEL":
+            print("Cancelling password reset")
+            return
+        elif (database.emailInDatabase(str(email))):
+            print(f"Email {email} found in database")
+            emailReceived = True
+            send("!SUCCESS", conn, addr)
+        else:
+            print(f"Email {email} not found in database")
+            send("!FAILURE", conn, addr)
+
+    username = database.getUsernameFromDatabase(email)
+    verificationNumber = twoFactorAuth.generateRandomNumber()
+    sendEmail.emailVerificationCode(username, getConfig.getEmailServer(), getConfig.getPasswordServer(), email, verificationNumber)
+
+    verificationReceived = False
+    userVerificationNumber = ""
+    attempts = 5
+    print(f"Waiting for verification code")
+    while not verificationReceived:
+        userVerificationNumber = receiveMessage(conn, addr)
+        if userVerificationNumber == "!CANCEL":
+            print("Cancelling password reset")
+            return
+        elif userVerificationNumber == verificationNumber:
+            print("Verification number correct!")
+            verificationReceived = True
+            send("!SUCCESS", conn, addr)
+        else:
+            attempts -= 1
+            if attempts <= 0:
+                print("Out of attempts.")
+                send("!STOP", conn, addr)
+                return
+            else:
+                print("Incorrect verification number")
+                send("!FAILURE", conn, addr)
+
+    newPassword = ""
+    newAuthNumber = 0
+    newPasswordReceived = False
+    while not newPasswordReceived:
+        newPassword = receiveMessage(conn, addr)
+        newAuthNumber = receiveMessage(conn, addr)
+        if newPassword == "!CANCEL":
+            print("Cancelling password reset")
+            return
+        elif str(newPassword) == database.getPasswordFromDatabase(username):
+            print("Password is the same")
+            send("!SAME", conn, addr)
+        else:
+            print("Password reset successful!")
+            send("!SUCCESS", conn, addr)
+            newPasswordReceived = True
+
+    database.updatePassword(username, str(newPassword))
+    database.updateAuthNum(username, int(newAuthNumber))
+    database.updateSecure(username, True)
+
+    twoFactorAuthenticationSetup(username, email, True)
+
+    print(f"User {username} password and 2FA has been reset!")
+    
+
+def twoFactorAuthenticationSetup(username, email, update):
     code1, code2, code3 = twoFactorAuth.generateCodes()
-    database.saveToCodesDatabase(username, code1, code2, code3)
+    if update:
+        database.updateAuthCodes(username, code1, code2, code3)
+    else:
+        database.saveToCodesDatabase(username, code1, code2, code3)
     sendEmail.emailQRCodes(username, getConfig.getEmailServer(), getConfig.getPasswordServer(), email, code1, code2, code3)
 
 

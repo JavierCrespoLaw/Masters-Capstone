@@ -13,6 +13,7 @@ class Login(QDialog):
         self.loginButton.clicked.connect(self.loginFunction)
         self.password.setEchoMode(QtWidgets.QLineEdit.Password)
         self.createAccButton.clicked.connect(self.goToCreateAcc)
+        self.resetPasswordButton.clicked.connect(self.goToResetPasswordStage1)
 
     def loginFunction(self):
         username = self.username.text()
@@ -43,6 +44,12 @@ class Login(QDialog):
     def goToAuthenticate(self):
         authenticate = Authenticate(self.username.text())
         widget.addWidget(authenticate)
+        widget.setCurrentIndex(widget.currentIndex() + 1)
+
+    def goToResetPasswordStage1(self):
+        client.send(client.RESET_PASSWORD_MESSAGE)
+        resetPasswordStage1 = ResetPasswordStage1()
+        widget.addWidget(resetPasswordStage1)
         widget.setCurrentIndex(widget.currentIndex() + 1)
 
     def closeEvent(self, a0):
@@ -120,6 +127,125 @@ class CreateAcc(QDialog):
                 print(f"Error: Username or Email already in use.")
 
     def goToLogin(self):
+        login = Login()
+        widget.addWidget(login)
+        widget.setCurrentIndex(widget.currentIndex() + 1)
+
+class ResetPasswordStage1(QDialog):
+    def __init__(self):
+        super(ResetPasswordStage1, self).__init__()
+        loadUi("resetPasswordStage1.ui", self)
+        self.confirmButton.clicked.connect(self.step1)
+        self.loginButton.clicked.connect(self.goToLogin)
+
+    def step1(self):
+        email = self.email.text()
+        print(f"Attempting to reset account password with email {email}")
+        if(validLoginInfo.checkValidEmail(email)):
+            client.send(email)
+            response = client.receiveMessage()
+            if response == "!SUCCESS":
+                print(f"Email success!")
+                self.goToResetPasswordStage2()
+            else:
+                dlg = CustomDialog("Email not found", "Email not found in database. Please check your spelling and try again.")
+                dlg.exec()
+        else:
+            dlg = CustomDialog("Invalid email", "Email not valid. Please check your spelling and try again.")
+            dlg.exec()
+
+    def goToResetPasswordStage2(self):
+        resetPasswordStage2 = ResetPasswordStage2(self.email.text())
+        widget.addWidget(resetPasswordStage2)
+        widget.setCurrentIndex(widget.currentIndex() + 1)
+
+    def goToLogin(self):
+        client.send("!CANCEL")
+        login = Login()
+        widget.addWidget(login)
+        widget.setCurrentIndex(widget.currentIndex() + 1)
+
+class ResetPasswordStage2(QDialog):
+    def __init__(self, email):
+        super(ResetPasswordStage2, self).__init__()
+        loadUi("resetPasswordStage2.ui", self)
+        self.email.setText(email)
+        self.confirmButton.clicked.connect(self.step2)
+        self.loginButton.clicked.connect(self.goToLogin)
+
+    def step2(self):
+        code = self.code.text()
+        print(f"Sending verification code {code}")
+        client.send(code)
+        response = client.receiveMessage()
+        if response == "!SUCCESS":
+            self.goToResetPasswordStage3()
+        elif response == "!FAILURE":
+            dlg = CustomDialog("IIncorrect code", "Code not valid. Please check your spelling and try again.")
+            dlg.exec()
+        elif response == "!STOP":
+            dlg = CustomDialog("Too many incorrect codes", "Too many incorrect codes have been entered. Please try again later.")
+            dlg.finished.connect(self.onPopupClosed)
+            dlg.exec()
+
+    def goToResetPasswordStage3(self):
+        resetPasswordStage3 = ResetPasswordStage3(self.email.text())
+        widget.addWidget(resetPasswordStage3)
+        widget.setCurrentIndex(widget.currentIndex() + 1)
+
+    def onPopupClosed(self, result):
+        login = Login()
+        widget.addWidget(login)
+        widget.setCurrentIndex(widget.currentIndex() + 1)
+
+    def goToLogin(self):
+        client.send("!CANCEL")
+        login = Login()
+        widget.addWidget(login)
+        widget.setCurrentIndex(widget.currentIndex() + 1)
+
+class ResetPasswordStage3(QDialog):
+    def __init__(self, email):
+        super(ResetPasswordStage3, self).__init__()
+        loadUi("resetPasswordStage3.ui", self)
+        self.email.setText(email)
+        self.confirmButton.clicked.connect(self.step3)
+        self.loginButton.clicked.connect(self.goToLogin)
+
+    def step3(self):
+        password = self.password.text()
+        passwordConfirm = self.passwordConfirm.text()
+        authenticationNumber = self.selection2FA.currentText()
+        if not validLoginInfo.checkValidPassword(password):
+            dlg = CustomDialog("Invalid Password", "Password not valid. Must be 8-20 characters long, with at least 1 uppercase, 1 lowercase, 1 number, and 1 symbol (@$#%)")
+            dlg.exec()
+        elif not authenticationNumber.isdigit():
+            dlg = CustomDialog("No Authentication Number", "Must select an authentication number")
+            dlg.exec()
+        elif not password == passwordConfirm:
+            dlg = CustomDialog("Passwords don't match", "Passwords do not match. Please check your spelling and try again.")
+            dlg.exec()
+        
+        else:
+            client.send(password)
+            client.send(authenticationNumber)
+            response = client.receiveMessage()
+            if response == "!SAME":
+                dlg = CustomDialog("Same Password", "Password cannot be the same as the old password.")
+                dlg.exec()
+            if response == "!SUCCESS":
+                dlg = CustomDialog("Success!", "Password has been reset! Please check your email for new 2FA codes.")
+                dlg.finished.connect(self.onPopupClosed)
+                dlg.exec()
+
+    def onPopupClosed(self, result):
+        login = Login()
+        widget.addWidget(login)
+        widget.setCurrentIndex(widget.currentIndex() + 1)
+
+    def goToLogin(self):
+        client.send("!CANCEL")
+        client.send("!CANCEL")
         login = Login()
         widget.addWidget(login)
         widget.setCurrentIndex(widget.currentIndex() + 1)

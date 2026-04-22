@@ -157,7 +157,72 @@ def getAuthNumFromDatabase(username):
         return data[0]
     return None
 
+def getUsernameFromDatabase(email):
+    conn = sqlite3.connect(Users)
+    cursor = conn.cursor()
 
+    query = "SELECT username FROM users WHERE email = ?"
+    cursor.execute(query, (email,))
+
+    data = cursor.fetchone()
+
+    if data is not None:
+        return data[0]
+    return None
+
+def getPasswordFromDatabase(username):
+    conn = sqlite3.connect(Users)
+    cursor = conn.cursor()
+
+    query = "SELECT password FROM users WHERE username = ?"
+    cursor.execute(query, (username,))
+
+    data = cursor.fetchone()
+
+    if data is not None:
+        return data[0]
+    return None
+
+def updatePassword(username, newPassword):
+    conn = sqlite3.connect(Users)
+    cursor = conn.cursor()
+
+    query = "UPDATE users SET password = ? WHERE username = ?"
+    cursor.execute(query, (newPassword, username))
+
+    conn.commit()
+    conn.close()
+
+def updateAuthNum(username, newAuthNum):
+    conn = sqlite3.connect(AuthenticationNumbers)
+    cursor = conn.cursor()
+
+    query = "UPDATE authNums SET number = ? WHERE username = ?"
+    cursor.execute(query, (newAuthNum, username))
+
+    conn.commit()
+    conn.close()
+
+def updateSecure(username, newSecure):
+    conn = sqlite3.connect(Users)
+    cursor = conn.cursor()
+
+    query = "UPDATE users SET secure = ? WHERE username = ?"
+    cursor.execute(query, (newSecure, username))
+
+    conn.commit()
+    conn.close()
+
+def updateAuthCodes(username, code1, code2, code3):
+
+    conn = sqlite3.connect(Codes)
+    cursor = conn.cursor()
+
+    query = "UPDATE codes SET code1 = ?, code2 = ?, code3 = ? WHERE username = ?"
+    cursor.execute(query, (code1, code2, code3, username))
+
+    conn.commit()
+    conn.close()
 
 def main():
     # print("Attempting to save something to database")
@@ -169,6 +234,7 @@ def main():
 
     print("Creating databases. ")
     createDatabases()
+    print(emailInDatabase)
 
 if __name__ == "__main__":
     main()
