@@ -1,5 +1,6 @@
 import server
 
+# Starts the server
 def main():
     server.start()
 

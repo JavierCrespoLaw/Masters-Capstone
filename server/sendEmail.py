@@ -14,14 +14,13 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 import os
 import shutil
 
+# Emails the 2FA QR codes to the user
+# Converts the 3 codes into QR code images to include in the email
+# Uses the server's email to send the message
 def emailQRCodes(username, email_server, password_server, email_receiver, code1, code2, code3):
 
     tempdir = ".\\Temp\\" + username
     os.makedirs(tempdir, exist_ok=True)
-
-    #qrFile1 = NamedTemporaryFile(suffix=".png", dir=tempdir.name)
-    #qrFile2 = NamedTemporaryFile(suffix=".png", dir=tempdir.name)
-    #qrFile3 = NamedTemporaryFile(suffix=".png", dir=tempdir.name)
 
     totp1 = pyotp.TOTP(code1)
     totp2 = pyotp.TOTP(code2)
@@ -90,6 +89,7 @@ def emailQRCodes(username, email_server, password_server, email_receiver, code1,
 
     shutil.rmtree(tempdir)
 
+# Sends a verification code to the given email
 def emailVerificationCode(username, email_server, password_server, email_receiver, verification_number):
     message = MIMEMultipart()
     message['FROM'] = email_server

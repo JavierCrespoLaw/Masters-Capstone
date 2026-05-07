@@ -1,8 +1,6 @@
 import os
 from dotenv import load_dotenv, dotenv_values
 # Values that will be included in config file:
-# EMAIL_SERVER - The email used by the server
-# PASSWORD_SERVER - The password used by the server's email
 # IP_ADDRESS - The IP address of the server
 
 # Loads the environment variables from the env file so that they can be accessed
@@ -13,21 +11,11 @@ def loadEnvValues():
 # Checks to make sure that each of the environment variables are filled in
 def testEnvValues():
     envValues = []
-    envValues.append(os.getenv("EMAIL_SERVER"))
-    envValues.append(os.getenv("PASSWORD_SERVER"))
     envValues.append(os.getenv("IP_ADDRESS"))
     for x in envValues:
         if x == None or x == "":
             return False
     return True
-
-# Gets the email field from the environment variables
-def getEmailServer():
-    return os.getenv("EMAIL_SERVER")
-
-# Gets the password field from the environment variables
-def getPasswordServer():
-    return os.getenv("PASSWORD_SERVER")
 
 # Gets the IP Address field from the environment variables
 def getIPAddress():

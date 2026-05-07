@@ -8,6 +8,7 @@ import database
 import getConfig
 import sendEmail
 import twoFactorAuth
+import encryptFiles
 
 HEADER = 64
 
@@ -22,20 +23,8 @@ LIST_END_MESSAGE = "!LIST_END"
 BUFFER_SIZE = 1024
 
 
-
-SERVER = socket.gethostbyname(socket.gethostname())
-SERVER_PORT = 5050
-SERVER_ADDR = (SERVER, SERVER_PORT)
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind(SERVER_ADDR)
-
-DATABASE = socket.gethostbyname(socket.gethostname())
-DATABASE_PORT = 5051
-DATABASE_ADDR = (DATABASE, DATABASE_PORT)
-
-
 # Send a message (msg) to the connection (conn)
-# sends the message length first and then the message itself
+# Sends the message length first and then the message itself
 def send(msg, conn, addr):
     message = msg.encode(FORMAT)
     msg_length = len(message)
@@ -44,8 +33,8 @@ def send(msg, conn, addr):
     conn.send(send_length)
     conn.send(message)
 
-# receives a message from the connection (conn)
-# gets the message length first, and then 
+# Receives a message from the connection (conn)
+# Gets the message length first, and then the message itself
 def receiveMessage(conn, addr):
     msg_length = conn.recv(HEADER).decode(FORMAT)
     if msg_length:
@@ -54,25 +43,49 @@ def receiveMessage(conn, addr):
         return msg
     return None
 
-# sends a file in folder (username) and with name (file_name)
+# Sends a set of bytes to the connection
+def sendBytes (bytes, conn, addr):
+    message = bytes
+    msg_length = len(message)
+    send_length = str(msg_length).encode(FORMAT)
+    send_length += b' ' * (HEADER - len(send_length))
+    conn.send(send_length)
+    conn.send(message)
+
+# Receives a set of bytes from the connection
+def receiveBytes(conn, addr):
+    msg_length = conn.recv(HEADER).decode(FORMAT)
+    if msg_length:
+        msg_length = int(msg_length)
+        bytes = conn.recv(msg_length)
+        return bytes
+    return None
+
+# Sends a file in folder (username) and with name (file_name)
 def sendFile(conn, addr, username, file_name):
     directory_path = ".\\documents\\" + username
     file_path = directory_path + "\\" + file_name
 
-    file = open(file_path, "r")
+    file = open(file_path, "rb")
 
     send(os.path.basename(file_path), conn, addr)
 
-    while True:
-        bytes_read = file.read(BUFFER_SIZE)
-        if not bytes_read:
-            break
-        send(bytes_read, conn, addr)
+    encrypted_bytes = file.read()
 
-    send(FILE_END_MESSAGE, conn, addr)
+    encrypted_bytes = encryptFiles.decryptInfo(encrypted_bytes)
+
+    byte_chunks = [encrypted_bytes[i:i + BUFFER_SIZE] for i in range(0, len(encrypted_bytes), BUFFER_SIZE)]
+
+    print(f"Type of byte_chunks in sendFile: {type(byte_chunks[0])}")
+
+    for chunk in byte_chunks:
+        sendBytes(chunk, conn, addr)
+
+    sendBytes(FILE_END_MESSAGE.encode(FORMAT), conn, addr)
 
     file.close
 
+# Deletes the specified file found in the folder belonging to (username)
 def deleteFile(username, file_name):
     directory_path = ".\\documents\\" + username
     file_path = directory_path + "\\" + file_name
@@ -91,23 +104,28 @@ def receiveFile(conn, addr, username):
 
     file_path = directory_path + "\\" + file_name
 
-    file = open(file_path, "w")
+    file = open(file_path, "wb")
 
-    file_bytes = ""
+    file_bytes = b""
 
     done = False
 
     while not done:
-        data = receiveMessage(conn, addr)
-        if data == FILE_END_MESSAGE:
+        data = receiveBytes(conn, addr)
+        if data == FILE_END_MESSAGE.encode(FORMAT):
             done = True
         else:
             file_bytes += data
+
+    file_bytes = encryptFiles.encryptInfo(file_bytes)
+
+    print(f"Type of file_bytes in receiveFile: {type(file_bytes)}")
 
     file.write(file_bytes)
 
     file.close()
 
+# Sends a list of the files found in folder (username)
 def sendFileList(conn, addr, username):
     list = []
 
@@ -151,6 +169,9 @@ def handle_client(conn, addr):
                 if logged_in:
                     print("Authentication attempt")
                     googleAuthSuccess, honeytoken = authenticate(username, conn, addr)
+                    if honeytoken:
+                        database.updateSecure(username, False)
+                        logged_in = False
                 else:
                     print("Error: need to log in first")
             case "!CANCEL_AUTH":
@@ -206,25 +227,29 @@ def handle_client(conn, addr):
                     file_name = receiveMessage(conn, addr)
                     deleteFile(username, file_name)
 
-        # conn.send("Message received".encode(FORMAT))
-
     conn.close()
 
-# checks to see if the user's login attempt is valid
+# Checks to see if the user's login attempt is valid
 def login(conn, addr):
     username = receiveMessage(conn, addr)
     password = receiveMessage(conn, addr)
     print(f"Login attempt detected with username {username} and password {password}")
     loginValid = database.existsInDatabase(username, password)
     if loginValid:
-        print(f"Username and password are valid!")
-        send("!SUCCESS", conn, addr)
+        if database.getSecureFromDatabase(username):
+            print(f"Username and password are valid!")
+            send("!SUCCESS", conn, addr)
+        else:
+            print(f"Account is not secure!")
+            send("!NOT_SECURE", conn, addr)
+            loginValid = False
     else:
         print(f"Username and password are not valid!")
         send("!FAILURE", conn, addr)
 
     return loginValid, username
 
+# Checks if the given OTP is valid, invalid, or a honeytoken
 def authenticate(username, conn, addr):
     userOTP = receiveMessage(conn, addr)
     code1, code2, code3 = database.getCodesFromDatabase(username)
@@ -247,7 +272,8 @@ def authenticate(username, conn, addr):
 
     return authSuccess, honeytoken
 
-
+# Checks if the user can register with the given username and email
+# If they can, the information is saved to the databases
 def register(conn, addr):
     username = receiveMessage(conn, addr)
     email = receiveMessage(conn, addr)
@@ -266,6 +292,9 @@ def register(conn, addr):
         print(f"Username or Email already in use")
         send("!FAILURE", conn, addr)
 
+# Password and 2FA code reset process
+# Multiple steps, including verifying if the email is in the datavase and that the user got the correct verification number
+# Once all steps have been completed, the password and 2FA codes are updated to new values and the account is labeled as secure
 def reset(conn, addr):
     emailReceived = False
     email = ""
@@ -334,7 +363,8 @@ def reset(conn, addr):
 
     print(f"User {username} password and 2FA has been reset!")
     
-
+# Generates new 2FA codes and saves them to the database
+# Emails those 2FA codes to the user
 def twoFactorAuthenticationSetup(username, email, update):
     code1, code2, code3 = twoFactorAuth.generateCodes()
     if update:
@@ -343,25 +373,35 @@ def twoFactorAuthenticationSetup(username, email, update):
         database.saveToCodesDatabase(username, code1, code2, code3)
     sendEmail.emailQRCodes(username, getConfig.getEmailServer(), getConfig.getPasswordServer(), email, code1, code2, code3)
 
-
+# Starts up the server
+# Creates a new thread whenever a new client connects to the server
+# Handles their requests until the connection is terminated
 def start_server():
+    # get local IP address: socket.gethostbyname(socket.gethostname())
+    server_addr = (getConfig.getIPAddress(), 5050)
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(server_addr)
     server.listen()
-    print("Server is listening on: " + SERVER)
+    print("Server is listening on: " + getConfig.getIPAddress())
     while True:
         conn, addr = server.accept()
         thread = threading.Thread(target = handle_client, args = (conn, addr))
         thread.start()
         print(f"Number of connections: {(threading.active_count() - 1)}")
 
+# Prepares all the prerequisites of the server
+# Sets up environment variables, databases, and symmetric encryption key
+# Once that is all set up, the server is put online
 def start():
     if getConfig.loadEnvValues() == False:
         print("Error: Unable to get config values. ")
         return
     database.createDatabases()
+    encryptFiles.createKey()
     print("Starting server: ")
     start_server()
 
-
+# Test main to verify other functions are working
 def main():
     getConfig.loadEnvValues()
     code1, code2, code3 = database.getCodesFromDatabase("testUser")

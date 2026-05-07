@@ -2,12 +2,14 @@ import pyotp
 import qrcode
 import random
 
+# Generates new 2FA codes
 def generateCodes():
     code1 = pyotp.random_base32()
     code2 = pyotp.random_base32()
     code3 = pyotp.random_base32()
     return code1, code2, code3
 
+# Verifies whether the given code is valid, invalid, or a honeytoken
 def verifyCodes(code1, code2, code3, userOTP, authNum):
     otp1 = pyotp.TOTP(code1)
     otp2 = pyotp.TOTP(code2)
@@ -46,6 +48,7 @@ def verifyCodes(code1, code2, code3, userOTP, authNum):
             else:
                 return "FAILURE"
             
+# Generates a random 6 digit number
 def generateRandomNumber():
     random_number = random.randint(0, 999999)
     padded_number = f"{random_number:06}"
