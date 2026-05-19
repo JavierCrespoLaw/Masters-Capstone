@@ -12,12 +12,12 @@ Once these values have been established, save the server folder to the location 
 
 The server can be run with the command:
 
-'''python
+```bash
 python main.py
-'''
+```
 
 Once the server is running, the client can be run with the same command:
 
-'''python
+```bash
 python main.py
-'''
+```
